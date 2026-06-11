@@ -63,12 +63,13 @@ python auto_evaluate.py
 ```
 chaoxing_evaluation/
 ├── auto_evaluate.py    # 核心脚本
-├── ChaoxingAutoEval.exe # 打包好的可执行文件（无需 Python）
 ├── run.bat             # Windows 一键启动器（需要 Python）
 ├── requirements.txt    # Python 依赖
 ├── LICENSE             # MIT 开源许可证
 └── README.md           # 项目说明
 ```
+
+> 📦 exe 可执行文件请前往 [Releases](../../releases) 页面下载。
 
 ## ⚙️ 工作流程
 
