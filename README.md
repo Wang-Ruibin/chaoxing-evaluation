@@ -30,20 +30,23 @@
 
 ### 环境要求
 
-- Python 3.7+
 - Google Chrome 浏览器
 - 网络连接
 
 ### 安装与运行
 
-**方式一：一键启动（推荐）**
+**方式一：直接运行 exe（推荐，无需 Python）**
+
+从 [Releases](../../releases) 页面下载最新版 `ChaoxingAutoEval.exe`，双击即可运行。
+
+**方式二：使用 bat 启动（需要 Python 环境）**
 
 ```bash
 # 双击 run.bat 即可，自动安装依赖并运行
 run.bat
 ```
 
-**方式二：手动运行**
+**方式三：手动运行（需要 Python 环境）**
 
 ```bash
 # 1. 安装依赖
@@ -60,7 +63,8 @@ python auto_evaluate.py
 ```
 chaoxing_evaluation/
 ├── auto_evaluate.py    # 核心脚本
-├── run.bat             # Windows 一键启动器
+├── ChaoxingAutoEval.exe # 打包好的可执行文件（无需 Python）
+├── run.bat             # Windows 一键启动器（需要 Python）
 ├── requirements.txt    # Python 依赖
 ├── LICENSE             # MIT 开源许可证
 └── README.md           # 项目说明

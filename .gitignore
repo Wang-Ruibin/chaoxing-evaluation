@@ -1,0 +1,12 @@
+# PyInstaller build artifacts
+build/
+dist/
+*.spec
+
+# Compiled executable (distributed via Releases)
+ChaoxingAutoEval.exe
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
