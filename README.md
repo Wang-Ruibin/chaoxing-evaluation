@@ -101,9 +101,7 @@ chaoxing_evaluation/
 
 **如果觉得有用，点个 ⭐ Star 支持一下叭~**
 
-<img src="https://raw.githubusercontent.com/cat-milk/Anime-Girls-Holding-Programming-Books/master/Python/Cute_Girl_Holding_Python_Book.png" width="200" alt="cute">
-
-<br/><br/>
+<br/>
 
 Made with ❤️ by a student who also doesn't like filling out evaluations
 
