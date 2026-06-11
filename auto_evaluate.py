@@ -11,7 +11,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import (
-    NoSuchElementException, UnexpectedAlertPresentException
+    NoSuchElementException, UnexpectedAlertPresentException,
+    ElementClickInterceptedException, StaleElementReferenceException
 )
 from webdriver_manager.chrome import ChromeDriverManager
 
@@ -180,6 +181,96 @@ class ChaoxingEvaluator:
                 except:
                     continue
         return None
+
+    def has_next_page(self):
+        """检查是否有下一页，返回是否可翻页"""
+        js = """
+        // 常见的翻页元素：链接、按钮、li等
+        var selectors = [
+            'a', 'button', 'li', 'span', 'div'
+        ];
+        var nextKeywords = ['下一页', '下页', '>', '›', '»', 'Next'];
+        for (var s = 0; s < selectors.length; s++) {
+            var elements = document.querySelectorAll(selectors[s]);
+            for (var i = 0; i < elements.length; i++) {
+                var el = elements[i];
+                var text = (el.innerText || el.textContent || '').trim();
+                // 检查文本内容是否匹配下一页关键词
+                for (var k = 0; k < nextKeywords.length; k++) {
+                    if (text === nextKeywords[k]) {
+                        var r = el.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) {
+                            // 检查是否被禁用（常见样式）
+                            var cls = (el.className || '').toLowerCase();
+                            var disabled = el.disabled || el.getAttribute('disabled') ||
+                                          cls.indexOf('disable') >= 0 || cls.indexOf('inactive') >= 0 ||
+                                          cls.indexOf('unclick') >= 0 || cls.indexOf('nolink') >= 0;
+                            if (!disabled) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+        """
+        try:
+            return self.driver.execute_script(js)
+        except:
+            return False
+
+    def go_to_next_page(self):
+        """点击下一页，返回是否成功"""
+        js = """
+        var selectors = ['a', 'button', 'li', 'span', 'div'];
+        var nextKeywords = ['下一页', '下页', '>', '›', '»', 'Next'];
+        for (var s = 0; s < selectors.length; s++) {
+            var elements = document.querySelectorAll(selectors[s]);
+            for (var i = 0; i < elements.length; i++) {
+                var el = elements[i];
+                var text = (el.innerText || el.textContent || '').trim();
+                for (var k = 0; k < nextKeywords.length; k++) {
+                    if (text === nextKeywords[k]) {
+                        var r = el.getBoundingClientRect();
+                        if (r.width > 0 && r.height > 0) {
+                            var cls = (el.className || '').toLowerCase();
+                            var disabled = el.disabled || el.getAttribute('disabled') ||
+                                          cls.indexOf('disable') >= 0 || cls.indexOf('inactive') >= 0 ||
+                                          cls.indexOf('unclick') >= 0 || cls.indexOf('nolink') >= 0;
+                            if (!disabled) {
+                                el.scrollIntoView();
+                                el.click();
+                                return 'ok';
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return 'not_found';
+        """
+        try:
+            result = self.driver.execute_script(js)
+            if result == 'ok':
+                time.sleep(1.5)
+                return True
+        except (ElementClickInterceptedException, StaleElementReferenceException):
+            pass
+        except:
+            pass
+        return False
+
+    def navigate_to_page(self, category_name, target_page):
+        """刷新iframe后重新导航到指定页码（第1页不需要翻页）"""
+        self.refresh_iframe()
+        self.click_category(category_name)
+        time.sleep(0.5)
+        for _ in range(target_page - 1):
+            if not self.go_to_next_page():
+                return False
+            time.sleep(0.5)
+        return True
     
     def check_has_submit_button(self):
         js = """
@@ -380,44 +471,61 @@ class ChaoxingEvaluator:
     
     def process_category(self, name):
         print(f"\n    Category: {name}")
-        
+
         if not self.click_category(name):
             print(f"      Failed to click category!")
             return 0
-        
+
         time.sleep(1)
         completed = 0
         consecutive_failures = 0
-        
-        for _ in range(50):
-            self.refresh_iframe()
-            self.click_category(name)
-            time.sleep(0.5)
-            
+        page_num = 1
+
+        # 刷新并进入该分类的第一页
+        self.refresh_iframe()
+        self.click_category(name)
+        time.sleep(0.5)
+
+        while True:
             links = self.get_pending_links()
             pending = [l for l in links if l['id'] not in self.skipped_links]
-            
+
             if not pending:
-                print(f"      All done!")
-                break
-            
-            print(f"      [{len(pending)} remaining]")
-            
+                # 当前页没有待评价项，尝试翻到下一页
+                if self.has_next_page():
+                    print(f"      Page {page_num} done, going to next page...")
+                    if self.go_to_next_page():
+                        page_num += 1
+                        # 翻页后直接检查新页面，不需要刷新
+                        continue
+                    else:
+                        print(f"      Failed to go to next page")
+                        break
+                else:
+                    print(f"      All done! (total {page_num} page(s))")
+                    break
+
+            print(f"      [Page {page_num}] [{len(pending)} remaining]")
+
             result = self.process_one_evaluation()
-            
+
             if result == "success":
                 completed += 1
                 consecutive_failures = 0
                 time.sleep(1)
             elif result == "skipped":
-                consecutive_failures = 0
+                pass
             else:
                 consecutive_failures += 1
                 if consecutive_failures >= 3:
                     print(f"      Too many failures, skipping category")
                     break
                 time.sleep(1)
-        
+
+            # process_one_evaluation 内部会刷新iframe，需要重新定位到当前分类和页码
+            # navigate_to_page 会刷新iframe + 点击分类 + 翻到目标页
+            self.navigate_to_page(name, page_num)
+
         return completed
     
     def run(self):
