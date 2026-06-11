@@ -1,6 +1,7 @@
 # PyInstaller build artifacts
 build/
 dist/
+*.spec
 
 # Compiled executable (distributed via Releases)
 ChaoxingAutoEval.exe
