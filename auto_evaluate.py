@@ -4,8 +4,11 @@
 输入账号密码，自动完成所有评教问卷
 """
 
+import os
+import sys
 import time
 import random
+import shutil
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
@@ -15,6 +18,41 @@ from selenium.common.exceptions import (
     ElementClickInterceptedException, StaleElementReferenceException
 )
 from webdriver_manager.chrome import ChromeDriverManager
+
+def check_chrome_installed():
+    """检测是否安装了 Chrome，未安装则提示并返回 False"""
+    # 1. PATH 中查找
+    for name in ('google-chrome', 'google-chrome-stable', 'chrome', 'chromium', 'chromium-browser'):
+        if shutil.which(name):
+            return True
+
+    # 2. Windows 常见路径
+    if sys.platform == 'win32':
+        candidates = [
+            os.path.join(os.environ.get('PROGRAMFILES', ''), 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            os.path.join(os.environ.get('PROGRAMFILES(X86)', ''), 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            os.path.join(os.environ.get('LOCALAPPDATA', ''), 'Google', 'Chrome', 'Application', 'chrome.exe'),
+        ]
+        for p in candidates:
+            if p and os.path.isfile(p):
+                return True
+
+    # 3. macOS 常见路径
+    if sys.platform == 'darwin':
+        mac_path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        if os.path.isfile(mac_path):
+            return True
+
+    print("\n" + "=" * 60)
+    print("  错误：未检测到 Chrome 浏览器")
+    print("=" * 60)
+    print("\n  本脚本需要 Chrome 浏览器才能运行。")
+    print("  请先前往以下地址下载并安装：")
+    print("\n      https://www.google.cn/chrome/")
+    print("\n  安装完成后重新运行本脚本即可。")
+    print("=" * 60)
+    return False
+
 
 # 评语库
 POSITIVE_TEXTS = [
@@ -567,14 +605,18 @@ def main():
     print("\n" + "="*60)
     print("  Chaoxing Auto Evaluation Script")
     print("="*60)
-    
+
+    if not check_chrome_installed():
+        input("\n  按回车键退出...")
+        return
+
     username = input("\n  Username: ").strip()
     password = input("  Password: ").strip()
-    
+
     if not username or not password:
         print("  Username and password required!")
         return
-    
+
     evaluator = None
     try:
         evaluator = ChaoxingEvaluator(username, password)
